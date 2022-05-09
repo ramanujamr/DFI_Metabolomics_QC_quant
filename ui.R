@@ -2,7 +2,7 @@
 
 ui <- fluidPage(shinytheme("journal"),
                 useShinyjs(),
-                titlePanel("DFI Metabolomics QC - Quantitative"),
+                titlePanel("DFI Metabolomics QC - Quant"),
                 
                 fluidRow(
                   h3("1. UPLOAD DATA"),
