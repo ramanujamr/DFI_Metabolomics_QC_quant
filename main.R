@@ -29,8 +29,8 @@ zero_threshold <- 1000
 
 # 1. set up directory and files ########################################################################################
 
-#wddir <- "/Volumes/chaubard-lab/shiny_workspace/csvs/"
-wddir <- "/Users/ramanujam/GitHub/dfimmfshiny_test/test_files"
+wddir <- "/Volumes/chaubard-lab/shiny_workspace/csvs/"
+#wddir <- "/Users/ramanujam/GitHub/dfimmfshiny_test/test_files"
 
 #'* Read quant tables*
 df_quant_BileAcids <- read.csv("quant_compounds_bile_acids.csv")
@@ -161,3 +161,4 @@ Function_plot_itsd <- function(df_itsd, df_itsd_stats)
 source('ui.R', local=TRUE)
 source('server.R', local=TRUE)
 shinyApp(ui=ui, server=server)
+runApp(list(ui=ui, server=server), host="0.0.0.0",port=1001)
