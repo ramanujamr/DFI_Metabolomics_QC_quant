@@ -69,7 +69,9 @@ ui <- fluidPage(shinytheme("journal"),
                   column(width=6, align="center", shiny::actionButton("Button_save_cc_metrics", "Save CC metrics", 
                                                                       icon("save"), width="200px",
                                                                       style="color: #fff; background-color: #00ab66; border-color: #2e6da4")),
-                  column(width=3, offset=3, align="center", shiny::actionButton("Button_continue", "Continue", icon("chevron-right"), width="200px",
+                  column(width=3, offset=3, align="center", 
+                         checkboxInput("Checkbox_subtract_MB","Subtract Method Blanks", value=T),
+                         shiny::actionButton("Button_continue", "Continue", icon("chevron-right"), width="200px",
                                                                       style="color: #fff; background-color: #2346b0; border-color: #2e6da4"))
 
                   ),
@@ -97,6 +99,7 @@ ui <- fluidPage(shinytheme("journal"),
                 
                 fluidRow(  
                   h4("4.4 Barplots (by compounds)"),
+                  h5("Error bars are calculated by the range of plasma QCs (max-min) for each compound"),
                   plotOutput("Plot_bar1", height = "800px")),
                   
                   br(), br(), hr(),
@@ -110,17 +113,17 @@ ui <- fluidPage(shinytheme("journal"),
                 fluidRow(
                   column(width=3, align="center", 
                          fluidRow(
-                           shiny::actionButton("Button_download_normalized_csv", "Normalized Table", icon("file-csv"), width="200px",
+                           shiny::downloadButton("Button_download_normalized_csv", "Normalized Results", icon("file-csv"), width="200px",
                                                style="color: #fff; background-color: #00ab66; border-color: #2e6da4"),
-                           shiny::actionButton("Button_download_normalized_csv_no_qc", "Normalized Table (No QC)", icon("file-csv"), width="200px",
+                           shiny::downloadButton("Button_download_normalized_csv_no_qc", "Normalized Results (No QC)", icon("file-csv"), width="200px",
                                              style="color: #fff; background-color: #00ab66; border-color: #2e6da4")
                          )),
                   
                   column(width=3, align="center", 
                          fluidRow(
-                           shiny::actionButton("Button_download_quant_csv", "Quant Table", icon("file-csv"), width="200px",
+                           shiny::downloadButton("Button_download_quant_csv", "Quant Results", icon("file-csv"), width="200px",
                                                style="color: #fff; background-color: #00ab66; border-color: #2e6da4"),
-                           shiny::actionButton("Button_download_quant_csv_no_qc", "Quant Table (No QC)", icon("file-csv"), width="200px",
+                           shiny::downloadButton("Button_download_quant_csv_no_qc", "Quant Results (No QC)", icon("file-csv"), width="200px",
                                                style="color: #fff; background-color: #00ab66; border-color: #2e6da4")
                          )),
                   

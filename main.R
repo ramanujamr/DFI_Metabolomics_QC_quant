@@ -21,10 +21,6 @@ library(ggpmisc)
 
 # 0. Initializations ###################################################################################################
 
-# quant_compounds <- c("cholic acid", "deoxycholic acid", "lithocholic acid", "glycocholic acid", "taurocholic acid", 
-#                      "isodeoxycholic acid", "alloisolithocholic acid", "3-oxolithocholic acid")
-# 
-# num_quant_compounds <- length(quant_compounds)
 zero_threshold <- 1000
 
 # 1. set up directory and files ########################################################################################
@@ -37,7 +33,6 @@ df_quant_BileAcids <- read.csv("quant_compounds_bile_acids.csv")
 df_quant_PFBBr <- read.csv("quant_compounds_pfbbr.csv")
 df_quant_TMS <- read.csv("quant_compounds_tms.csv")
 df_quant_Tryptophan <- read.csv("quant_compounds_tryptophan.csv")
-
 
 
 # 2. FUNCTIONS #########################################################################################################

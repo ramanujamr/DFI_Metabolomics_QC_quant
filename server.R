@@ -139,10 +139,13 @@ server <- function(input, output, session) {
   
   observeEvent(input$Button_calibration, ignoreInit = T, ignoreNULL = T, {
     
+    
+    #saveRDS(hot_to_r(input$Table_calibration_settings), "df_quant_compounds.rds")
+    #df_quant_compounds <- readRDS( "df_quant_compounds.rds")
+    
+    
     # Update df_cc based on inputs from Table_calibration_settings (rHandsontableOutput)
     rvalues$df_quant_compounds <- hot_to_r(input$Table_calibration_settings)
-    saveRDS(rvalues$df_cc, "df_cc.rds")
-    df_cc <- readRDS( "df_cc.rds")
 
     # Normalized dataframe ---------------------------------------------------------------------------------------------
     
@@ -157,7 +160,9 @@ server <- function(input, output, session) {
         group_by(sampleid, letter) %>%
         mutate(ITSD = zoo::na.locf(ITSD),
                norm_peak = ifelse(ITSD==0, 0, peak / ITSD),
-               curveLab = str_extract(sampleid,pattern="CC[1-9][0-9]+|CC[1-9]+"))
+               curveLab = str_extract(sampleid,pattern="CC[1-9][0-9]+|CC[1-9]+")) %>% 
+        ungroup() %>% 
+        mutate(norm_peak = ifelse(is.na(norm_peak), 0, norm_peak))
     
     }else {
       rvalues$df_normalized <- rvalues$df_input %>% 
@@ -167,7 +172,9 @@ server <- function(input, output, session) {
         replace_na(list(itsd="peak")) %>%
         reshape2::dcast(sampleid+compound_name+conc ~ itsd, value.var="peakarea") %>% 
         mutate(norm_peak = ifelse(ITSD==0, 0, peak / ITSD),
-               curveLab = str_extract(sampleid,pattern="CC[1-9][0-9]+|CC[1-9]+"))
+               curveLab = str_extract(sampleid,pattern="CC[1-9][0-9]+|CC[1-9]+")) %>% 
+        ungroup() %>% 
+        mutate(norm_peak = ifelse(is.na(norm_peak), 0, norm_peak))
       }
 
     
@@ -280,9 +287,11 @@ server <- function(input, output, session) {
       mutate(quant_val =  (norm_peak - (Intercept))/Slope*as.numeric(input$Textin_x_factor)) %>%
       arrange(compound_name) %>%
       mutate(quant_val = ifelse(quant_val < 0,0,quant_val),
+             quant_val = ifelse(is.na(quant_val), 0, quant_val),
              quant_val = round(quant_val,2)) %>% 
       filter(!is.na(norm_peak)) %>% 
-      filter(!is.na(R))
+      filter(!is.na(R)) %>% 
+      ungroup()
     
     # Plasma QC dataframe
     rvalues$df_plasma_qc <- rvalues$df_calibrated %>%
@@ -333,10 +342,11 @@ server <- function(input, output, session) {
     df_method_blanks_avg <- rvalues$df_method_blanks %>% 
       group_by(compound_name) %>% 
       summarize(mean_mb = mean(quant_val))
-      
+    
     rvalues$df_calibrated <- rvalues$df_calibrated %>% 
       left_join(df_method_blanks_avg, by="compound_name") %>% 
-      mutate(quant_val = quant_val - mean_mb)
+      rowwise() %>%
+      mutate(quant_val = ifelse(input$Checkbox_subtract_MB==T, quant_val - mean_mb, quant_val))
     
     # Display calibrated table
     output$Table_calibrated_data <- DT::renderDataTable({
@@ -347,7 +357,7 @@ server <- function(input, output, session) {
     
     # Bar plot 1 (separated by compounds)
     
-    df_bar <- rvalues$df_calibrated %>%
+    rvalues$df_bar <- rvalues$df_calibrated %>%
       ungroup() %>% 
       select(sampleid, compound_name, quant_val) %>%
       filter(!grepl("MB",sampleid, ignore.case = T),
@@ -357,11 +367,11 @@ server <- function(input, output, session) {
              !grepl("CC[0-9]+", sampleid))
     
     output$Plot_bar1 <- renderPlot({
-      rvalues$plot_bar1 <- df_bar %>% 
+      rvalues$plot_bar1 <- rvalues$df_bar %>% 
         left_join(df_plasma_qc_range) %>% 
         ggplot(aes(x = sampleid, y = quant_val, fill = compound_name)) +
         geom_bar(stat="identity") +
-        geom_errorbar(aes(ymin = quant_val-(min_val+max_val)/2, ymax = quant_val + (min_val+max_val)/2), width = 0.2) +
+        geom_errorbar(aes(ymin = quant_val-(max_val-min_val)/2, ymax = quant_val + (max_val-min_val)/2), width = 0.2) +
         theme_bw() +
         theme(plot.margin=unit(c(5.5, 15, 5.5, 10),"points"),
               panel.grid.minor = element_blank(),
@@ -376,8 +386,8 @@ server <- function(input, output, session) {
                                         hjust = 1,
                                         angle = 90,
                                         size = ifelse(
-                                          (((nrow(df_bar)))+(nrow(df_bar)))*1000 / (nrow(df_bar) * nrow(df_bar)) >= 11,
-                                          11, (((nrow(df_bar)))+(nrow(df_bar)))*1000 / (nrow(df_bar) * nrow(df_bar))))) +
+                                          (((nrow(rvalues$df_bar)))+(nrow(rvalues$df_bar)))*1000 / (nrow(rvalues$df_bar) * nrow(rvalues$df_bar)) >= 11,
+                                          11, (((nrow(rvalues$df_bar)))+(nrow(rvalues$df_bar)))*1000 / (nrow(rvalues$df_bar) * nrow(rvalues$df_bar))))) +
         facet_wrap(~compound_name, scales = "free_y") +
         scale_fill_manual(values = c(pal_ucscgb("default", alpha = 0.7)(7), "bisque4"))+
         xlab("\nSampleID") +
@@ -388,7 +398,7 @@ server <- function(input, output, session) {
     })
     
     output$Plot_bar2 <- renderPlot({
-      rvalues$plot_bar2 <- df_bar %>% 
+      rvalues$plot_bar2 <- rvalues$df_bar %>% 
         ggplot(aes(x = sampleid, y = quant_val, fill = compound_name)) +
         geom_bar(stat="identity", position="stack") +
         theme_bw() +
@@ -401,12 +411,10 @@ server <- function(input, output, session) {
               strip.text=element_text(size=18),
               axis.text.y =element_text(size=11),
               axis.title = element_text(size = 15),
-              axis.text.x =element_text(vjust = 0.5,
-                                        hjust = 1,
-                                        angle = 90,
+              axis.text.x =element_text(vjust = 0.5, hjust = 1, angle = 90,
                                         size = ifelse(
-                                          (((nrow(df_bar)))+(nrow(df_bar)))*1000 / (nrow(df_bar) * nrow(df_bar)) >= 15,
-                                          15, (((nrow(df_bar)))+(nrow(df_bar)))*1000 / (nrow(df_bar) * nrow(df_bar))))) +
+                                          (((nrow(rvalues$df_bar)))+(nrow(rvalues$df_bar)))*1000 / (nrow(rvalues$df_bar) * nrow(rvalues$df_bar)) >= 15,
+                                          15, (((nrow(rvalues$df_bar)))+(nrow(rvalues$df_bar)))*1000 / (nrow(rvalues$df_bar) * nrow(rvalues$df_bar))))) +
         scale_fill_manual(values = c(pal_ucscgb("default", alpha = 0.7)(7), "bisque4"))+
         xlab("\nSampleID") +
         ylab(paste0("Concentration (", input$Select_conc_unit,")")) +
@@ -421,72 +429,90 @@ server <- function(input, output, session) {
   # 4. SAVE RESULTS ####################################################################################################
   
   ## 4.1 Normalized csv ================================================================================================
-  observeEvent(input$Button_download_normalized_csv, ignoreInit = T, ignoreNULL = T, {
+  output$Button_download_normalized_csv <- downloadHandler(
     
-    rvalues$df_normalized %>% 
-      select(sampleid, compound_name, norm_peak) %>% 
-      mutate(sampleid = ifelse(grepl("MB|Pooled|Plasma|CC|Standard", sampleid, ignore.case = T),
-                               sampleid,
-                               gsub("^[0-9]{3}_", "", sampleid))) %>% 
-      pivot_wider(names_from = compound_name, values_from = norm_peak, values_fill = NA) %>% 
-      write.csv(paste0("~/Downloads/normalized_results_",
-                       gsub("\\.csv","",input$filename),"_",
-                       gsub("\\-","",Sys.Date()),".csv"), row.names=F,quote=F)
+    filename = function(){
+      paste0("normalized_results_",
+             gsub("\\.csv","",input$filename),"_",
+             gsub("\\-","",Sys.Date()),".csv")
+    },
     
-    shinyalert(title = "File saved to ~/Downloads", type = "success")
-  })
+    content = function(file) {
+      
+      rvalues$df_normalized %>% 
+        select(sampleid, compound_name, norm_peak) %>% 
+        mutate(sampleid = ifelse(grepl("MB|Pooled|Plasma|CC|Standard", sampleid, ignore.case = T),
+                                 sampleid,
+                                 gsub("^[0-9]{3}_", "", sampleid))) %>% 
+        pivot_wider(names_from = compound_name, values_from = norm_peak, values_fill = NA) %>% 
+        write.csv(file=file, row.names=F,quote=F)
+    })
   
   
   ## 4.2 Normalized csv (No QCs) =======================================================================================
-  observeEvent(input$Button_download_normalized_csv_no_qc, ignoreInit = T, ignoreNULL = T, {
+  output$Button_download_normalized_csv_no_qc <- downloadHandler(
     
-    rvalues$df_normalized %>% 
-      select(sampleid, compound_name, norm_peak) %>% 
-      filter(!grepl("MB|Pooled|Plasma|CC|Standard",sampleid, ignore.case = T)) %>% 
-      mutate(sampleid = gsub("^[0-9]{3}_", "", sampleid)) %>% 
-      pivot_wider(names_from = compound_name, values_from = norm_peak, values_fill = NA) %>% 
-      write.csv(paste0("~/Downloads/removed_qcs_normalized_results_",
-                       gsub("\\.csv","",input$filename),"_",
-                       gsub("\\-","",Sys.Date()),".csv"), row.names=F,quote=F)
+    filename = function(){
+      paste0("removed_qcs_normalized_results_",
+             gsub("\\.csv","",input$filename),"_",
+             gsub("\\-","",Sys.Date()),".csv")
+    },
     
-    shinyalert(title = "File saved to ~/Downloads", type = "success")
-    
-  })
+    content = function(file) {
+      
+      rvalues$df_normalized %>% 
+        select(sampleid, compound_name, norm_peak) %>% 
+        filter(!grepl("MB|Pooled|Plasma|CC|Standard",sampleid, ignore.case = T)) %>% 
+        mutate(sampleid = gsub("^[0-9]{3}_", "", sampleid)) %>% 
+        pivot_wider(names_from = compound_name, values_from = norm_peak, values_fill = NA) %>% 
+        write.csv(file=file, row.names = F, quote=F)
+    })
+  
+  
+
   
   ## 4.3 Quant csv =====================================================================================================
   
-  observeEvent(input$Button_download_quant_csv, ignoreInit = T, ignoreNULL = T, {
+  output$Button_download_quant_csv <- downloadHandler(
     
-    rvalues$df_calibrated %>% 
-      select(sampleid, compound_name, norm_peak) %>% 
-      mutate(sampleid = ifelse(grepl("MB|Pooled|Plasma|CC|Standard", sampleid, ignore.case = T),
-                               sampleid,
-                               gsub("^[0-9]{3}_", "", sampleid))) %>% 
-      pivot_wider(names_from = compound_name, values_from = norm_peak, values_fill = NA) %>% 
-      write.csv(paste0("~/Downloads/quant_results_",
-                       gsub("\\.csv","",input$filename),"_",
-                       gsub("\\-","",Sys.Date()),".csv"), row.names=F,quote=F)
+    filename = function(){
+      paste0("quant_results_",
+             gsub("\\.csv","",input$filename),"_",
+             gsub("\\-","",Sys.Date()),".csv")
+    },
     
-    shinyalert(title = "File saved to ~/Downloads", type = "success")
-  })
+    content = function(file) {
+      
+      rvalues$df_calibrated %>% 
+        select(sampleid, compound_name, quant_val) %>% 
+        mutate(sampleid = ifelse(grepl("MB|Pooled|Plasma|CC|Standard", sampleid, ignore.case = T),
+                                 sampleid,
+                                 gsub("^[0-9]{3}_", "", sampleid))) %>% 
+        pivot_wider(names_from = compound_name, values_from = quant_val, values_fill = NA) %>% 
+        write.csv(file=file, row.names=F,quote=F)
+    })
   
   
   ## 4.4 Quant csv (No QCs) ============================================================================================
   
-  observeEvent(input$Button_download_quant_csv_no_qc, ignoreInit = T, ignoreNULL = T, {
+  output$Button_download_quant_csv_no_qc <- downloadHandler(
     
-    rvalues$df_calibrated %>% 
-      select(sampleid, compound_name, norm_peak) %>% 
-      filter(!grepl("MB|Pooled|Plasma|CC|Standard",sampleid, ignore.case = T)) %>% 
-      mutate(sampleid = gsub("^[0-9]{3}_", "", sampleid)) %>% 
-      pivot_wider(names_from = compound_name, values_from = norm_peak, values_fill = NA) %>% 
-      write.csv(paste0("~/Downloads/removed_qcs_quant_results_",
-                       gsub("\\.csv","",input$filename),"_",
-                       gsub("\\-","",Sys.Date()),".csv"), row.names=F,quote=F)
+    filename = function(){
+      paste0("removed_qcs_quant_results_",
+             gsub("\\.csv","",input$filename),"_",
+             gsub("\\-","",Sys.Date()),".csv")
+    },
     
-    shinyalert(title = "File saved to ~/Downloads", type = "success")
-    
-  })
+    content = function(file) {
+      
+      rvalues$df_calibrated %>% 
+        select(sampleid, compound_name, quant_val) %>% 
+        filter(!grepl("MB|Pooled|Plasma|CC|Standard",sampleid, ignore.case = T)) %>% 
+        mutate(sampleid = gsub("^[0-9]{3}_", "", sampleid)) %>% 
+        pivot_wider(names_from = compound_name, values_from = quant_val, values_fill = NA) %>% 
+        write.csv(file=file, row.names = F, quote=F)
+    })
+  
 
   ## 4.5 Barplots ======================================================================================================
 
@@ -497,11 +523,14 @@ server <- function(input, output, session) {
     },
 
     content = function(file) {
-      pdf(file, height = 11, width = 8.5)
+      pdf(file, height = ncol(rvalues$df_bar)*7.5 / (ncol(rvalues$df_bar)), 
+          width =  nrow(rvalues$df_bar)*33 / (nrow(rvalues$df_bar))+1.5)
       print(rvalues$plot_bar1)
       print(rvalues$plot_bar2)
       dev.off()
     })
+  
+  
 
   ## 4.6 QC report =====================================================================================================
 
@@ -513,7 +542,7 @@ server <- function(input, output, session) {
 
     content = function(file) {
 
-      pdf(file, height = 11, width = 8.5)
+      pdf(file, height = 11, width = 12)
       
       print(Function_plot_itsd(rvalues$df_itsd, rvalues$df_itsd_stats) +
               ggtitle(paste("Bile Acid Quantitative QC Report\n", unique(rvalues$df_input$batch))) +
