@@ -138,11 +138,7 @@ server <- function(input, output, session) {
   ## 2.1 Button - Calibration ==========================================================================================
   
   observeEvent(input$Button_calibration, ignoreInit = T, ignoreNULL = T, {
-    
-    
-    #saveRDS(hot_to_r(input$Table_calibration_settings), "df_quant_compounds.rds")
-    #df_quant_compounds <- readRDS( "df_quant_compounds.rds")
-    
+  
     
     # Update df_cc based on inputs from Table_calibration_settings (rHandsontableOutput)
     rvalues$df_quant_compounds <- hot_to_r(input$Table_calibration_settings)

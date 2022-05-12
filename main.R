@@ -17,8 +17,6 @@ library(gridExtra)
 library(ggpmisc)
 
 
-
-
 # 0. Initializations ###################################################################################################
 
 zero_threshold <- 1000
