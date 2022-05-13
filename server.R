@@ -313,6 +313,7 @@ server <- function(input, output, session) {
         geom_jitter(position=position_jitter(0.05)) +
         geom_point(data=rvalues$df_quant_compounds, aes(x=compound_name, y=as.numeric(plasma_qc_target)), color="red") +
         theme_bw() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
         xlab("Compound") + ylab(paste0("Concentration (", input$Select_conc_unit,")"))
       
       rvalues$plot_plasma_qc
@@ -329,6 +330,7 @@ server <- function(input, output, session) {
       ggplot(rvalues$df_method_blanks, aes(x=compound_name, y=quant_val)) +
         geom_jitter(position=position_jitter(0.05)) +
         theme_bw() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
         xlab("Compound") + ylab(paste0("Concentration (", input$Select_conc_unit,")"))
     })
     
@@ -381,11 +383,9 @@ server <- function(input, output, session) {
               axis.text.x =element_text(vjust = 0.5,
                                         hjust = 1,
                                         angle = 90,
-                                        size = ifelse(
-                                          (((nrow(rvalues$df_bar)))+(nrow(rvalues$df_bar)))*1000 / (nrow(rvalues$df_bar) * nrow(rvalues$df_bar)) >= 11,
-                                          11, (((nrow(rvalues$df_bar)))+(nrow(rvalues$df_bar)))*1000 / (nrow(rvalues$df_bar) * nrow(rvalues$df_bar))))) +
+                                        size = 7)) +
         facet_wrap(~compound_name, scales = "free_y") +
-        scale_fill_manual(values = c(pal_ucscgb("default", alpha = 0.7)(7), "bisque4"))+
+        scale_fill_manual(values = c(paletteer::paletteer_d("ggsci::default_igv", length(rvalues$quant_compounds)))) +
         xlab("\nSampleID") +
         ylab(paste0("Concentration (", input$Select_conc_unit,")")) +
         guides(fill = guide_legend(title="Compound    "))
@@ -408,10 +408,8 @@ server <- function(input, output, session) {
               axis.text.y =element_text(size=11),
               axis.title = element_text(size = 15),
               axis.text.x =element_text(vjust = 0.5, hjust = 1, angle = 90,
-                                        size = ifelse(
-                                          (((nrow(rvalues$df_bar)))+(nrow(rvalues$df_bar)))*1000 / (nrow(rvalues$df_bar) * nrow(rvalues$df_bar)) >= 15,
-                                          15, (((nrow(rvalues$df_bar)))+(nrow(rvalues$df_bar)))*1000 / (nrow(rvalues$df_bar) * nrow(rvalues$df_bar))))) +
-        scale_fill_manual(values = c(pal_ucscgb("default", alpha = 0.7)(7), "bisque4"))+
+                                        size = 10)) +
+        scale_fill_manual(values = c(paletteer::paletteer_d("ggsci::default_igv", length(rvalues$quant_compounds))))+
         xlab("\nSampleID") +
         ylab(paste0("Concentration (", input$Select_conc_unit,")")) +
         guides(fill = guide_legend(title="Compound    "))

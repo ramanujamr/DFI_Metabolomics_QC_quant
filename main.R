@@ -15,6 +15,7 @@ library(broom)
 library(ggsci)
 library(gridExtra)
 library(ggpmisc)
+library(paletteer)
 
 
 # 0. Initializations ###################################################################################################
