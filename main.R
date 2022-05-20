@@ -16,6 +16,7 @@ library(ggsci)
 library(gridExtra)
 library(ggpmisc)
 library(paletteer)
+library(ggforce)
 
 
 # 0. Initializations ###################################################################################################
@@ -25,7 +26,7 @@ zero_threshold <- 1000
 # 1. set up directory and files ########################################################################################
 
 wddir <- "/Volumes/chaubard-lab/shiny_workspace/csvs/"
-#wddir <- "/Users/ramanujam/GitHub/dfimmfshiny_test/test_files"
+#wddir <- "/Users/ramanujam/GitHub/test_files"
 
 #'* Read quant tables*
 df_quant_BileAcids <- read.csv("quant_compounds_bile_acids.csv")
@@ -37,7 +38,6 @@ df_quant_Tryptophan <- read.csv("quant_compounds_tryptophan.csv")
 # 2. FUNCTIONS #########################################################################################################
 
 ## 2.1 Read and clean data from input file =============================================================================
-
 
 Function_readin_csv_1 <- function(filename, zero_threshold, recursive=F)
 {
@@ -70,6 +70,7 @@ Function_readin_csv_2 <- function(filename, zero_threshold, recursive=F){
   
   df_input_raw <- read.csv(file=filename, check.names=F)
   colnames(df_input_raw)[2] <- "garbage"
+  
   colnames(df_input_raw)[3] <- "sampleid"
   colnames(df_input_raw)[4] <- "Data.File"
   colnames(df_input_raw)[5] <- "Type"
@@ -92,21 +93,26 @@ Function_readin_csv_2 <- function(filename, zero_threshold, recursive=F){
     select(sampleid, date_run, batch, compound_name, itsd, conc, peakarea=value) %>% 
     mutate(conc = ifelse(grepl("dil",conc),"diluted","concentrated"),
            peakarea = ifelse(peakarea <= zero_threshold, 0, peakarea),
-           cc = str_extract(sampleid, pattern=".*CC.*"),
-           cc = sub(".*_", "", cc))
-  
+           cc = str_extract(sampleid, pattern=".*CC.*|.*cc.*"),
+           cc = sub(".*_", "", toupper(cc))) %>% 
+    mutate(sampleid = ifelse(grepl(".*CC.*|.*cc.*", sampleid), toupper(sampleid), sampleid)) %>% 
+    mutate(compound_name = sub("_[0-9]{4}$", "", compound_name)) %>% 
+    mutate(compound_name = gsub("proline_d7", "proline", compound_name)) # SPECIFIC FOR PFBBr PANEL
+   
   return(df_input)
 }
 
 
+
 ## 2.1 Plot ITSD =======================================================================================================
 
-Function_plot_itsd <- function(df_itsd, df_itsd_stats)
+Function_plot_itsd <- function(df_itsd, df_itsd_stats, num_pages)
 {
   df_itsd %>%
-    filter(!grepl("MB",sampleid, ignore.case = T),
-           !grepl("plasma",sampleid, ignore.case = T)) %>% 
-    left_join(df_itsd_stats, by = "compound_name") %>%
+    filter(!grepl("MB|plasma",sampleid, ignore.case = T)) %>% 
+    group_by(compound_name) %>%
+    mutate(average = mean(peakarea),
+           stdev = sd(peakarea)) %>% 
     mutate(flag = ifelse(peakarea > average + (1.5 * stdev) |
                            peakarea < average - (1.5 * stdev), paste(num,batch,sampleid, sep = "_"), NA)) %>%
     group_by(compound_name) %>%
@@ -143,8 +149,7 @@ Function_plot_itsd <- function(df_itsd, df_itsd_stats)
     scale_y_continuous(label = scales::scientific) +
     scale_x_continuous(breaks = seq(0,150,25)) +
     ylab("Raw Peak Area\n") +
-    xlab("\nInjection Number")+
-    facet_grid(~compound_name, scales="free_x")
+    xlab("\nInjection Number")
 }
 
 

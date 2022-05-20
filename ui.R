@@ -9,7 +9,9 @@ ui <- fluidPage(shinytheme("journal"),
                   hr(),
                   column(width=3,
                   selectInput("filename", label="Select csv file to upload",
-                              list.files(wddir, pattern = "*.csv", ignore.case = T)),
+                              rev(list.files(wddir, 
+                                             pattern = ".*bile.*csv|.*PFBBr.*csv|.*Indole.*csv|.*Tryptophan.*csv",
+                                             ignore.case = T))),
                   actionButton("Button_refresh_csv", "Refresh", icon("sync"), width="100px"),
                   actionButton("Button_upload_csv", "Upload", icon("upload"), width="100px",
                                                style="color: #fff; background-color: #2346b0; border-color: #2e6da4"),
@@ -54,7 +56,13 @@ ui <- fluidPage(shinytheme("journal"),
                              dblclick = "Plot_calibration_curves_dblclick",
                              brush = brushOpts(id = "Plot_calibration_curves_brush", resetOnNew = TRUE)))
                   ),
+                fluidRow(
+                  column(width=2, numericInput("Numericinput_min_cc", "Min CC", value=0)),
+                  column(width=2, numericInput("Numericinput_max_cc", "Max CC", value=125))
+                ),
+                fluidRow( column(width=1, shiny::actionButton("Button_cc_range", "Update"))),
                 br(), br(), hr(),
+                
                 fluidRow(
                   column(width=6, 
                          h4("3.2 Calibration data"),
@@ -111,14 +119,6 @@ ui <- fluidPage(shinytheme("journal"),
 
                 
                 fluidRow(
-                  column(width=3, align="center", 
-                         fluidRow(
-                           shiny::downloadButton("Button_download_normalized_csv", "Normalized Results", icon("file-csv"), width="200px",
-                                               style="color: #fff; background-color: #00ab66; border-color: #2e6da4"),
-                           shiny::downloadButton("Button_download_normalized_csv_no_qc", "Normalized Results (No QC)", icon("file-csv"), width="200px",
-                                             style="color: #fff; background-color: #00ab66; border-color: #2e6da4")
-                         )),
-                  
                   column(width=3, align="center", 
                          fluidRow(
                            shiny::downloadButton("Button_download_quant_csv", "Quant Results", icon("file-csv"), width="200px",
