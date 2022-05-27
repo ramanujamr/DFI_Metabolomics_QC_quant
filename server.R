@@ -192,7 +192,7 @@ server <- function(input, output, session) {
         inner_join(rvalues$df_quant_compounds[, c("compound_name", "conc")], by = c("compound_name", "conc")) %>%
         mutate(compound_name=factor(compound_name,levels = rvalues$quant_compounds)) %>%
         replace_na(list(itsd="peak")) %>%
-        reshape2::dcast(sampleid+compound_name+conc ~ itsd, value.var="peakarea") %>% 
+        reshape2::dcast(sampleid+compound_name+conc ~ itsd, value.var="peakarea", fun.aggregate = mean) %>% 
         mutate(norm_peak = ifelse(ITSD==0, 0, peak / ITSD),
                curveLab = str_extract(sampleid,pattern="CC[1-9][0-9]+|CC[1-9]+")) %>% 
         ungroup() %>% 

@@ -31,7 +31,6 @@ wddir <- "/Volumes/chaubard-lab/shiny_workspace/csvs/"
 #'* Read quant tables*
 df_quant_BileAcids <- read.csv("quant_compounds_bile_acids.csv")
 df_quant_PFBBr <- read.csv("quant_compounds_pfbbr.csv")
-df_quant_TMS <- read.csv("quant_compounds_tms.csv")
 df_quant_Tryptophan <- read.csv("quant_compounds_tryptophan.csv")
 
 
