@@ -12,22 +12,38 @@ server <- function(input, output, session) {
   
   shinyjs::hide("Button_itsd_stats")
   shinyjs::hide("Button_itsd_plot")
+  shinyjs::hide("Button_new_file")
   
   
   # 1. INPUT DATA ######################################################################################################
 
   ## 1.1 Refresh CSV list when hit button ==============================================================================
-  
   observeEvent(input$Button_refresh_csv, ignoreInit = T, ignoreNULL = T, {
     updateSelectInput(session, 'filename', choices = rev(list.files(wddir, 
                                                                     pattern = ".*bile.*csv|.*PFBBr.*csv|.*Indole.*csv|.*Tryptophan.*csv", 
                                                                     ignore.case = T)))
   })
+  
+  ## 1.2 Upload new file ===============================================================================================
+  observeEvent(input$Button_new_file, ignoreInit = T, ignoreNULL = T, {
+    session$reload()
+  })
+  
+  
+  
+  
+  
+  
 
   ## 1.2 Get input data from csv =======================================================================================
 
   observeEvent(input$Button_upload_csv, ignoreInit = T, ignoreNULL = T, {
     
+    shinyjs::hide("filename")
+    shinyjs::hide("Button_refresh_csv")
+    shinyjs::hide("Button_upload_csv")
+    
+    shinyjs::show("Button_new_file")
     shinyjs::show("Button_itsd_stats")
     shinyjs::show("Button_itsd_plot")
     
