@@ -2,7 +2,7 @@
 
 ui <- fluidPage(shinytheme("journal"),
                 useShinyjs(),
-                titlePanel("DFI Metabolomics QC - Quant"),
+                titlePanel("DFI Metabolomics QC - Quant V2"),
                 
                 fluidRow(
                   h3("1. UPLOAD DATA"),
@@ -23,10 +23,7 @@ ui <- fluidPage(shinytheme("journal"),
                   column(width=3, offset=1,
                          br(),
                          fluidRow(actionButton("Button_itsd_stats", "ITSD stats", icon("tv"), width="150px")),
-                         bsModal("Modal_ITSD_stats", "ITSD stats", "Button_itsd_stats", size = "large", DT::dataTableOutput("Table_ITSD_stats")),
-                         br(),
-                         fluidRow(actionButton("Button_itsd_plot", "ITSD plot", icon("tv"), width="150px")),
-                         bsModal("Modal_ITSD_plot", "ITSD plot", "Button_itsd_plot", size = "large", plotOutput("Plot_ITSD_stats"))),
+                         bsModal("Modal_ITSD_stats", "ITSD stats", "Button_itsd_stats", size = "large", DT::dataTableOutput("Table_ITSD_stats"))),
                          
                   column(width=1, shinythemes::themeSelector())
                 ),
@@ -38,7 +35,8 @@ ui <- fluidPage(shinytheme("journal"),
                   column(width=9, rHandsontableOutput("Table_calibration_settings")),
                   column(width=2, offset=1, align="center",
                          fluidRow(numericInput(inputId = "Textin_x_factor", value = 1, label="Multiplication factor"),
-                                  selectInput("Select_conc_unit","Select concentration unit", choices = c("μg/mL", "mg/mL")))
+                                  selectInput("Select_conc_unit","Select concentration unit", choices = c("ug/mL", "mg/mL", "uM/mL")),
+                                  checkboxInput("Checkbox_intercept_zero","Force intercept to zero (Tryptophan only)", value=F))
                          )),
                 
                 br(), br(),

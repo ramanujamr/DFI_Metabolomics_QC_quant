@@ -1,4 +1,4 @@
-# BILE QUANT SERVER
+# QUANT SERVER
 
 server <- function(input, output, session) {
   
@@ -11,7 +11,6 @@ server <- function(input, output, session) {
   ranges <- reactiveValues(x = NULL, y = NULL)
   
   shinyjs::hide("Button_itsd_stats")
-  shinyjs::hide("Button_itsd_plot")
   shinyjs::hide("Button_new_file")
   
   
@@ -29,13 +28,9 @@ server <- function(input, output, session) {
     session$reload()
   })
   
-  
-  
-  
-  
-  
 
-  ## 1.2 Get input data from csv =======================================================================================
+
+  ## 1.2 Button Upload CSV #############################################################################################
 
   observeEvent(input$Button_upload_csv, ignoreInit = T, ignoreNULL = T, {
     
@@ -45,11 +40,11 @@ server <- function(input, output, session) {
     
     shinyjs::show("Button_new_file")
     shinyjs::show("Button_itsd_stats")
-    shinyjs::show("Button_itsd_plot")
+
     
     filename <- file.path(wddir,input$filename)
     
-    # Identify panel and read equivalent quant compounds csv
+    # Identify panel and read equivalent quant compounds csv --------------------------------
     rvalues$panel <- case_when(
       grepl("Bile", input$filename, ignore.case = T) ~ "BileAcids",
       grepl("PFBBr", input$filename, ignore.case = T) ~ "PFBBr",
@@ -57,14 +52,14 @@ server <- function(input, output, session) {
       grepl("TMS", input$filename, ignore.case = T) ~ "TMS",
       TRUE ~ "NOT IDENTIFIED... CHECK FILENAME")
     
-    # Read and clean input data
+    # Read and clean input data --------------------------------
     if (rvalues$panel == "BileAcids") {
       rvalues$df_input <- Function_readin_csv_1(filename, zero_threshold) 
     } else {
       rvalues$df_input <- Function_readin_csv_2(filename, zero_threshold) 
     }
   
-    # Check data availability for dil/conc for each compound
+    # Check data availability for dil/conc for each compound --------------------------------
     dil_conc_found <- rvalues$df_input %>% 
       select(compound_name, conc) %>% 
       group_by(compound_name) %>% 
@@ -84,7 +79,7 @@ server <- function(input, output, session) {
       distinct()
     
     
-    # Find number of cc points for each quant compound
+    # Find number of cc points for each quant compound --------------------------------
     num_cc <- rvalues$df_input %>% 
       select(compound_name, cc) %>% 
       filter(compound_name %in% rvalues$df_quant_compounds$compound_name) %>% 
@@ -96,10 +91,10 @@ server <- function(input, output, session) {
       relocate(num_cc, .after = found_dil)
     
     
-    # Quant compounds
+    # Get quant compounds --------------------------------
     rvalues$quant_compounds <- rvalues$df_quant_compounds %>% filter(found=="Yes") %>% pull(compound_name)
     
-    # ITSD dataframe
+    # ITSD dataframe (per sample for normalization) --------------------------------
     rvalues$df_itsd <- rvalues$df_input %>% 
       filter(itsd == "ITSD") %>% 
       filter(!grepl("MB|Pooled|Plasma|Standard|Spiked",sampleid, ignore.case = T)) %>% 
@@ -126,8 +121,34 @@ server <- function(input, output, session) {
     }
     
     
+    # ITSD stats per compound (for QC) --------------------------------
     
-    # Outputs
+    rvalues$df_itsd_stats_compounds <- rvalues$df_input %>%
+      filter(itsd=="ITSD") %>%
+      filter(!grepl("MB|Pooled|Plasma|CC|Standard",sampleid, ignore.case = T)) %>% 
+      mutate(peakarea = ifelse(peakarea <= zero_threshold, 0, peakarea)) %>% 
+      group_by(batch, compound_name) %>%
+      summarise(stdev = sd(peakarea),
+                average = mean(peakarea),
+                middle = median(peakarea),
+                cv = stdev / average,
+                cv_med = stdev / median(peakarea)) # Don't turn into % here since it will be applied in the y-axis scale
+    
+    rvalues$df_itsd_compounds <- rvalues$df_input %>% 
+      filter(itsd == "ITSD") %>% 
+      filter(!grepl("MB|Pooled|Plasma|Standard|Spiked",sampleid, ignore.case = T)) %>% 
+      mutate(peakarea = ifelse(peakarea <= zero_threshold, 0, peakarea),
+             num = str_extract(sampleid, "[0-9][0-9][0-9]"),
+             num = as.numeric(num),
+             cc_shape = ifelse(grepl("CC[0-9]+", sampleid), "CC Sample", "ITSD")) %>% 
+      left_join(rvalues$df_itsd_stats_compounds) %>% 
+      mutate(num = as.numeric(num),
+             flag = ifelse(peakarea > average + (1.5 * stdev) | peakarea < average - (1.5 * stdev), 
+                           paste(num,batch,sampleid, sep = "_"), NA))
+
+    
+    
+    # Outputs -------------------
     output$Textout_panel <- renderText({paste("Panel: ", rvalues$panel)}) # Display identified panel
     output$Textout_filename <- renderText({paste("Uploaded file: ", input$filename)}) # Display filename
     
@@ -149,15 +170,24 @@ server <- function(input, output, session) {
   
   # ITSD stats (bsModal)
   output$Table_ITSD_stats <- DT::renderDataTable({
-    rvalues$df_itsd_stats %>% 
+    rvalues$df_itsd_stats_compounds %>% 
+      dplyr::rename(Batch = batch,
+                    `Internal Standard` = compound_name,
+                    StDev = stdev,
+                    Mean = average,
+                    Median = middle,
+                    CV = cv,
+                    `CV Median` = cv_med) %>%
+      mutate(StDev = round(StDev, digits = 0),
+             Mean = round(Mean, digits = 0),
+             Median = round(Median, digits = 0),
+             `CV (%)` = round(CV * 100, digits = 1),
+             `CV Median (%)` = round(`CV Median` * 100, digits = 1)) %>%
+      select(Batch,`Internal Standard`,StDev,Mean,Median,`CV (%)`,`CV Median (%)`) %>% 
       datatable(options = list(columnDefs = list(list(className='dt-center', targets="_all"))))
+      
   })
   
-  # ITSD plot (bsModal)
-  output$Plot_ITSD_stats <- renderPlot({
-    Function_plot_itsd(rvalues$df_itsd, rvalues$df_itsd_stats, ceiling(length(unique(df_itsd$compound_name))/8)) +
-      facet_grid(~compound_name) 
-  })
   
   # 2. CALIBRATE #######################################################################################################
 
@@ -174,21 +204,6 @@ server <- function(input, output, session) {
     # Normalized dataframe ---------------------------------------------------------------------------------------------
     
     if (rvalues$panel == "BileAcids") { # For bile acids panel
-      
-      # df_normalized <- df_input %>% 
-      #   filter(compound_name %in% quant_compounds) %>%
-      #   inner_join(df_quant_compounds[, c("compound_name", "conc")], by = c("compound_name", "conc")) %>%
-      #   mutate(compound_name=factor(compound_name,levels = quant_compounds)) %>%
-      #   replace_na(list(itsd="peak")) %>%
-      #   reshape2::dcast(sampleid+compound_name+conc+letter ~ itsd, value.var="peakarea",
-      #                   fun.aggregate = mean) %>%
-      #   group_by(sampleid, letter) %>%
-      #   mutate(ITSD = zoo::na.locf(ITSD),
-      #          norm_peak = ifelse(ITSD==0, 0, peak / ITSD),
-      #          curveLab = str_extract(sampleid,pattern="CC[1-9][0-9]+|CC[1-9]+")) %>% 
-      #   ungroup() %>% 
-      #   mutate(norm_peak = ifelse(is.na(norm_peak), 0, norm_peak))
-
       
       rvalues$df_normalized <- rvalues$df_input %>% 
         filter(compound_name %in% rvalues$quant_compounds) %>%
@@ -241,24 +256,42 @@ server <- function(input, output, session) {
     })
     
     
-    # Display Linear models table --------------------------------------------------------------------------------------
+    # Update and display Linear models table ---------------------------------------------------------------------------
     
     output$Table_linear_models <- DT::renderDataTable({
       
       keep <- rvalues$df_cc[ rvalues$keeprows, , drop = FALSE]
+      saveRDS(keep, "keep.rds")
       
-      rvalues$df_linear_models <- keep %>%
-        filter(!is.na(norm_peak)) %>% 
-        group_by(compound_name) %>%
-        summarize(r = cor(norm_peak,conc_val),
-                  model_list <- broom::tidy(lm(norm_peak ~ conc_val))) %>%
-        reshape2::dcast(compound_name+r ~ term,value.var="estimate") %>%
-        dplyr::rename(R=r,
-                      Intercept=`(Intercept)`,
-                      Slope=conc_val) %>% 
-        mutate_if(is.numeric, round, 3)  %>% 
-        filter(!is.na(R))
-
+      if( rvalues$panel == "Tryptophan" & input$Checkbox_intercept_zero==T ) { # For tryptophan panel only
+        
+        rvalues$df_linear_models <- keep %>%
+          filter(!is.na(norm_peak)) %>% 
+          group_by(compound_name) %>%
+          summarize(r = cor(norm_peak,conc_val),
+                    model_list <- broom::tidy(lm(norm_peak ~ conc_val + 0))) %>%
+          reshape2::dcast(compound_name+r ~ term,value.var="estimate") %>%
+          dplyr::rename(R=r,
+                        Slope=conc_val) %>% 
+          mutate_if(is.numeric, round, 3)  %>% 
+          filter(!is.na(R)) %>% 
+          mutate(Intercept = 0)
+        
+        } else {
+          
+        rvalues$df_linear_models <- keep %>%
+          filter(!is.na(norm_peak)) %>% 
+          group_by(compound_name) %>%
+          summarize(r = cor(norm_peak,conc_val),
+                    model_list <- broom::tidy(lm(norm_peak ~ conc_val))) %>%
+          reshape2::dcast(compound_name+r ~ term,value.var="estimate") %>%
+          dplyr::rename(R=r,
+                        Intercept=`(Intercept)`,
+                        Slope=conc_val) %>% 
+          mutate_if(is.numeric, round, 3)  %>% 
+          filter(!is.na(R))
+        
+        }
       
       rvalues$df_linear_models %>% 
         dplyr::rename(Compound=compound_name) %>% 
@@ -324,17 +357,21 @@ server <- function(input, output, session) {
   
   ## 2.3 Button - Save calibration curve metrics csv ===================================================================
   
-  observeEvent(input$Button_download_cc_metrics, {
-    write.csv(rvalues$df_linear_models, paste0("/Volumes/chaubard-lab/shiny_workspace/calibration_metrics/",
-                                 gsub(".csv","",input$filename),"_CC_Metrics",".csv"))
+  observeEvent(input$Button_save_cc_metrics, {
+    rvalues$df_linear_models %>% 
+      left_join(rvalues$df_input %>% dplyr::select(compound_name, batch), by="compound_name") %>% 
+      left_join(rvalues$df_quant_compounds %>% dplyr::select(compound_name, conc), by="compound_name") %>% 
+      select(Batch = batch, `Internal Standard`=compound_name, `Concentration`=conc, r=R, Intercept, Slope) %>% 
+      distinct() %>% 
+      write.csv(paste0("/Volumes/chaubard-lab/shiny_workspace/calibration_metrics/",
+                       gsub(".csv","",input$filename),"_CC_Metrics",".csv"))
+    
+    shinyalert(title = "File saved to /Volumes/chaubard-lab/shiny_workspace/calibration_metrics/", type = "success")
+    
     })
   
   
-  
-  
-  
-  
-  
+
   
   
   
@@ -415,6 +452,7 @@ server <- function(input, output, session) {
     # Display calibrated table
     output$Table_calibrated_data <- DT::renderDataTable({
       rvalues$df_calibrated %>% 
+        select(-Data.File, -date_run, -Compound.Name, - filename, -cc) %>% 
         datatable(options = list(columnDefs = list(list(className='dt-center', targets="_all"))), 
                   class = 'cell-border stripe')
     })
@@ -431,9 +469,8 @@ server <- function(input, output, session) {
         left_join(df_plasma_qc_range) %>% 
         ggplot(aes(x = sampleid, y = quant_val, fill = compound_name)) +
         geom_bar(stat="identity") +
-        geom_errorbar(aes(ymin = ifelse(quant_val - (max_val-min_val)/2 < 0, 0, quant_val - (max_val-min_val)/2), 
-                          ymax = quant_val + (max_val-min_val)/2), 
-                      width = 0.2) +
+        #geom_errorbar(aes(ymin = ifelse(quant_val - (max_val-min_val)/2 < 0, 0, quant_val - (max_val-min_val)/2), 
+        #                  ymax = quant_val + (max_val-min_val)/2), width = 0.2) +
         theme_bw() +
         theme(plot.margin=unit(c(5.5, 15, 5.5, 10),"points"),
               panel.grid.minor = element_blank(),
@@ -553,29 +590,83 @@ server <- function(input, output, session) {
   ## 4.6 QC report =====================================================================================================
 
   output$Button_download_qc_report <- downloadHandler(
-
+    
     filename = function(){
       paste0(rvalues$panel, "_QC_Report_",unique(rvalues$df_input$batch),"_",Sys.Date(),".pdf")
     },
-
+    
     content = function(file) {
+      
+      ### Plot ---------------------------------------------------------------------------------------------------------
+      plot_itsd <- rvalues$df_itsd_compounds %>%
+        ggplot(., aes(x = num, y = peakarea, group = compound_name, label = flag)) +
+        geom_point(aes(color = compound_name, shape = cc_shape), fill = "black", alpha = 0.6, size = 2) +
+        geom_line(aes(y = average, color = compound_name)) +
+        geom_line(aes(y = average + 1.5*stdev, color = compound_name), linetype = "dashed") +
+        geom_line(aes(y = average - 1.5*stdev, color = compound_name), linetype = "dashed") +
+        geom_ribbon(aes(ymin = average - stdev, ymax = average + stdev,
+                        fill = compound_name), alpha=0.2) +
+        ggrepel::geom_label_repel(size = 1.2, max.overlaps = Inf,
+                                  min.segment.length = 0.1, label.padding = 0.1, na.rm=T) +
+        theme_bw()+
+        theme(panel.grid.minor= element_blank(),
+              panel.grid.major.x = element_blank(),
+              legend.text = element_text(color = "black", size = 8),
+              legend.title = element_text(color = "black", size = 10),
+              legend.position = "top",
+              strip.text=element_text(color = "black", size=5),
+              axis.text =element_text(color = "black", size=8),
+              axis.title = element_text(color = "black", size = 10),
+              plot.margin = margin(1,0.5,0,0.6, unit = 'cm')) +
+        scale_fill_manual(values = c(paletteer::paletteer_d("ggsci::default_igv", length(rvalues$quant_compounds)))) +
+        guides(color = guide_legend(title = "Internal Standard Compounds",
+                                    override.aes = list(size = 2.5), nrow = 2,
+                                    title.position="top", title.hjust = 0.5,
+                                    label.position = "right"), fill = "none",
+               shape = guide_legend(title = "",
+                                    override.aes = list(size = 2.5), nrow = 2,
+                                    title.position="top", title.hjust = 0.5,
+                                    label.position = "right")) +
+        scale_shape_manual(values = c(24,16))+
+        scale_y_continuous(label = scales::scientific) +
+        scale_x_continuous(breaks = seq(0,150,25)) +
+        ylab("Raw Peak Area\n") +
+        xlab("\nInjection Number")+
+        facet_wrap_paginate(~ compound_name, ncol = 2, nrow = 3) +
+        ggtitle(paste0(rvalues$panel, " Quantitative QC Report - ", unique(rvalues$df_input$batch)[1]))
+      
+      
+      
+      
+      
+      pdf(file, onefile=T, height = 11, width = 12)
+      
+      for(i in 1:n_pages(plot_itsd)){
+        print(plot_itsd + facet_wrap_paginate(~ compound_name, ncol = 2, nrow = 3, page = i))
+      }
+      
+      ### Summary table ------------------------------------------------------------------------------------------------
+      temp <- rvalues$df_itsd_stats_compounds %>%
+        dplyr::rename(Batch = batch,
+                      `Internal Standard` = compound_name,
+                      StDev = stdev,
+                      Mean = average,
+                      Median = middle,
+                      CV = cv,
+                      `CV Median` = cv_med) %>%
+        mutate(StDev = round(StDev, digits = 0),
+               Mean = round(Mean, digits = 0),
+               Median = round(Median, digits = 0),
+               `CV (%)` = round(CV * 100, digits = 1),
+               `CV Median (%)` = round(`CV Median` * 100, digits = 1)) %>%
+        select(Batch,`Internal Standard`,StDev,Mean,Median,`CV (%)`,`CV Median (%)`)
 
-      pdf(file, height = 11, width = 12)
-      
-      print(Function_plot_itsd(rvalues$df_itsd, rvalues$df_itsd_stats, ceiling(length(unique(df_itsd$compound_name))/8)) +
-              facet_grid_paginate(~compound_name, scales="free_x", ncol = 4, nrow = 2, page = num_pages) +
-              ggtitle(paste("Bile Acid Quantitative QC Report\n", unique(rvalues$df_input$batch))) +
-              theme(plot.title = element_text(color = "black", hjust = 0.5, size = 20, face = "bold")))
-      print(rvalues$plot_plasma_qc)
-      
-      ba_tt <- gridExtra::ttheme_default(
-        colhead=list(fg_params=list(col="black", fontface=2L)),
-        padding = unit(c(0.5,0.75), "cm"))
-      print( gridExtra::grid.arrange(gridExtra::tableGrob(rvalues$df_itsd_stats, rows = NULL, theme = ba_tt)) )
-      
-      print(rvalues$plot_cc)
 
-      dev.off()
+      print( gridExtra::grid.arrange(gridExtra::tableGrob(temp, rows = NULL)) )
+      
+      invisible(dev.off())
     })
-   
+  
+  
+  
 }
