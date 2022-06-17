@@ -451,10 +451,16 @@ server <- function(input, output, session) {
     
     # Display calibrated table
     output$Table_calibrated_data <- DT::renderDataTable({
-      rvalues$df_calibrated %>% 
-        select(-Data.File, -date_run, -Compound.Name, - filename, -cc) %>% 
-        datatable(options = list(columnDefs = list(list(className='dt-center', targets="_all"))), 
-                  class = 'cell-border stripe')
+      if(rvalues$panel=="BileAcids"){
+        rvalues$df_calibrated %>% 
+          select(-Data.File, -date_run, -Compound.Name, - filename, -cc) %>% 
+          datatable(options = list(columnDefs = list(list(className='dt-center', targets="_all"))), 
+                    class = 'cell-border stripe')
+      }else{
+        rvalues$df_calibrated %>% 
+          datatable(options = list(columnDefs = list(list(className='dt-center', targets="_all"))), 
+                    class = 'cell-border stripe')
+      }
     })
     
     # Bar plot 1 (separated by compounds)

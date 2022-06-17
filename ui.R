@@ -35,7 +35,7 @@ ui <- fluidPage(shinytheme("journal"),
                   column(width=9, rHandsontableOutput("Table_calibration_settings")),
                   column(width=2, offset=1, align="center",
                          fluidRow(numericInput(inputId = "Textin_x_factor", value = 1, label="Multiplication factor"),
-                                  selectInput("Select_conc_unit","Select concentration unit", choices = c("ug/mL", "mg/mL", "uM/mL")),
+                                  selectInput("Select_conc_unit","Select concentration unit", choices = c("ug/mL", "mg/mL")),
                                   checkboxInput("Checkbox_intercept_zero","Force intercept to zero (Tryptophan only)", value=F))
                          )),
                 
@@ -107,7 +107,6 @@ ui <- fluidPage(shinytheme("journal"),
                 
                 fluidRow(  
                   h4("4.4 Barplots (by compounds)"),
-                  h5("Error bars are calculated by the range of plasma QCs (max-min) for each compound"),
                   plotOutput("Plot_bar1", height = "800px")),
                   
                   br(), br(), hr(),
