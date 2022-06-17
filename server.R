@@ -261,7 +261,6 @@ server <- function(input, output, session) {
     output$Table_linear_models <- DT::renderDataTable({
       
       keep <- rvalues$df_cc[ rvalues$keeprows, , drop = FALSE]
-      saveRDS(keep, "keep.rds")
       
       if( rvalues$panel == "Tryptophan" & input$Checkbox_intercept_zero==T ) { # For tryptophan panel only
         
