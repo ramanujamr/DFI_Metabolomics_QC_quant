@@ -52,6 +52,9 @@ server <- function(input, output, session) {
       grepl("TMS", input$filename, ignore.case = T) ~ "TMS",
       TRUE ~ "NOT IDENTIFIED... CHECK FILENAME")
     
+    # Set zero threshold
+    zero_threshold <- ifelse(rvalues$panel=="Tryptophan", 100, 1000)
+    
     # Read and clean input data --------------------------------
     if (rvalues$panel == "BileAcids") {
       rvalues$df_input <- Function_readin_csv_1(filename, zero_threshold) 
