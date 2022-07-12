@@ -602,7 +602,11 @@ server <- function(input, output, session) {
     },
     
     content = function(file) {
-      rvalues$df_plasma_qc_range %>% write.csv(file=file, row.names = F, quote=F)
+      rvalues$df_plasma_qc_range %>% 
+        mutate(plasma_qc_range = max_val-min_val) %>% 
+        dplyr::select(compound_name, plasma_qc_range) %>% 
+        tidyr::spread(compound_name, plasma_qc_range) %>%
+        write.csv(file=file, row.names = F, quote=F)
     })
 
 
