@@ -64,12 +64,12 @@ server <- function(input, output, session) {
   
     # Check data availability for dil/conc for each compound --------------------------------
     dil_conc_found <- rvalues$df_input %>% 
-      select(compound_name, conc) %>% 
+      dplyr::select(compound_name, conc) %>% 
       group_by(compound_name) %>% 
       mutate(found_dil = ifelse(any(grepl("diluted", conc)), "Yes", "No"),
              found_conc = ifelse(any(grepl("concentrated", conc)), "Yes", "No")) %>% 
       distinct() %>% 
-      select(-conc)
+      dplyr::select(-conc)
     
     rvalues$df_quant_compounds <- get(paste0("df_quant_", rvalues$panel)) %>% 
       mutate(compound_name = tolower(compound_name)) %>% 
@@ -84,7 +84,7 @@ server <- function(input, output, session) {
     
     # Find number of cc points for each quant compound --------------------------------
     num_cc <- rvalues$df_input %>% 
-      select(compound_name, cc) %>% 
+      dplyr::select(compound_name, cc) %>% 
       filter(compound_name %in% rvalues$df_quant_compounds$compound_name) %>% 
       group_by(compound_name) %>% 
       summarize(num_cc = n_distinct(cc, na.rm = T))
@@ -403,7 +403,7 @@ server <- function(input, output, session) {
 
     
     # Plasma QC range dataframe (for barplot errorbars)
-    df_plasma_qc_range <- rvalues$df_plasma_qc %>%
+    rvalues$df_plasma_qc_range <- rvalues$df_plasma_qc %>%
       group_by(compound_name) %>% 
       mutate(max_val = max(quant_val, na.rm = T),
              min_val = min(quant_val, na.rm = T)) %>% 
@@ -474,7 +474,7 @@ server <- function(input, output, session) {
     
     output$Plot_bar1 <- renderPlot({
       rvalues$plot_bar1 <- rvalues$df_bar %>% 
-        left_join(df_plasma_qc_range) %>% 
+        left_join(rvalues$df_plasma_qc_range) %>% 
         ggplot(aes(x = sampleid, y = quant_val, fill = compound_name)) +
         geom_bar(stat="identity") +
         #geom_errorbar(aes(ymin = ifelse(quant_val - (max_val-min_val)/2 < 0, 0, quant_val - (max_val-min_val)/2), 
@@ -593,7 +593,18 @@ server <- function(input, output, session) {
       dev.off()
     })
   
+  ## 4.5 Plasma QC csv =================================================================================================
   
+  output$Button_download_plasmaQC <- downloadHandler(
+    
+    filename = function(){
+      paste0(rvalues$panel,unique(rvalues$df_input$batch), "_Plasma_QC_", Sys.Date(),".csv")
+    },
+    
+    content = function(file) {
+      rvalues$df_plasma_qc_range %>% write.csv(file=file, row.names = F, quote=F)
+    })
+
 
   ## 4.6 QC report =====================================================================================================
 

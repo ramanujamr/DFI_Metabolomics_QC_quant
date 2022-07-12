@@ -118,7 +118,7 @@ ui <- fluidPage(shinytheme("journal"),
 
                 
                 fluidRow(
-                  column(width=3, align="center", 
+                  column(width=2, align="center", 
                          fluidRow(
                            shiny::downloadButton("Button_download_quant_csv", "Quant Results", icon("file-csv"), width="200px",
                                                style="color: #fff; background-color: #00ab66; border-color: #2e6da4"),
@@ -126,11 +126,16 @@ ui <- fluidPage(shinytheme("journal"),
                                                style="color: #fff; background-color: #00ab66; border-color: #2e6da4")
                          )),
                   
-                  column(width=3, align="center", shiny::downloadButton("Button_download_barplots", "Barplots",
+                  column(width=2, align="center", shiny::downloadButton("Button_download_barplots", "Barplots",
                                                                       icon("file-pdf"), width="200px",
                                                                       style="color: #fff; background-color: #00ab66; border-color: #2e6da4")),
                   
-                  column(width=3, align="center", shiny::downloadButton("Button_download_qc_report", "QC Report",
+                  column(width=2, align="center", shiny::downloadButton("Button_download_plasmaQC", "Plasma QC",
+                                                                        icon("file-csv"), width="200px",
+                                                                        style="color: #fff; background-color: #00ab66; border-color: #2e6da4")),
+                  
+                  
+                  column(width=2, align="center", shiny::downloadButton("Button_download_qc_report", "QC Report",
                                                                       icon("file-pdf"), width="200px",
                                                                       style="color: #fff; background-color: #00ab66; border-color: #2e6da4")),
                 

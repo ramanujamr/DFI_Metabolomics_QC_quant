@@ -79,8 +79,8 @@ Function_readin_csv_2 <- function(filename, zero_threshold, recursive=F){
   df_input_raw = df_input_raw[-1,]
   
   df_input <- df_input_raw %>% 
-    select(-Sample, -garbage,-Type,-Level,-Acq.Date.Time, -Data.File) %>% 
-    slice(-1) %>% 
+    dplyr::select(-Sample, -garbage,-Type,-Level,-Acq.Date.Time, -Data.File) %>% 
+    dplyr::slice(-1) %>% 
     reshape2::melt(id.vars="sampleid") %>% 
     mutate(value = as.numeric(value)) %>% 
     replace_na(list(value = 0)) %>% 
@@ -89,7 +89,7 @@ Function_readin_csv_2 <- function(filename, zero_threshold, recursive=F){
            compound_name = tolower(gsub("\\_ITSD","",compound_name))) %>% 
     separate(sampleid, into=c("inj_num","date_run","batch","sampleid","conc"),sep="\\_\\_") %>% 
     mutate(sampleid = paste0(inj_num,"_",sampleid)) %>% 
-    select(sampleid, date_run, batch, compound_name, itsd, conc, peakarea=value) %>% 
+    dplyr::select(sampleid, date_run, batch, compound_name, itsd, conc, peakarea=value) %>% 
     mutate(conc = ifelse(grepl("dil",conc),"diluted","concentrated"),
            peakarea = ifelse(peakarea <= zero_threshold, 0, peakarea),
            cc = str_extract(sampleid, pattern=".*CC.*|.*cc.*"),
