@@ -35,7 +35,7 @@ ui <- fluidPage(shinytheme("journal"),
                   column(width=9, rHandsontableOutput("Table_calibration_settings")),
                   column(width=2, offset=1, align="center",
                          fluidRow(numericInput(inputId = "Textin_x_factor", value = 1, label="Multiplication factor"),
-                                  selectInput("Select_conc_unit","Select concentration unit", choices = c("ug/mL", "mg/mL")),
+                                  selectInput("Select_conc_unit","Select concentration unit", choices = c("ug/mL", "mM")),
                                   checkboxInput("Checkbox_intercept_zero","Force intercept to zero (Tryptophan only)", value=F))
                          )),
                 
