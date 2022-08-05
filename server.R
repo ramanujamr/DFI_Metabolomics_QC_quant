@@ -202,7 +202,7 @@ server <- function(input, output, session) {
     rvalues$df_quant_compounds <- hot_to_r(input$Table_calibration_settings)
     
     #saveRDS(rvalues$df_quant_compounds, "df_quant_compounds.rds")
-    #df_quant_compounds <- readRDS("df_quant_compounds.rds")
+    # df_quant_compounds <- readRDS("df_quant_compounds_pfbbr.rds")
 
     # Normalized dataframe ---------------------------------------------------------------------------------------------
     
@@ -553,6 +553,14 @@ server <- function(input, output, session) {
                                  gsub("^[0-9]{3}_", "", sampleid))) %>% 
         pivot_wider(names_from = compound_name, values_from = quant_val, values_fill = NA) %>% 
         write.csv(file=file, row.names=F,quote=F)
+      
+      temp <- rvalues$df_calibrated %>% 
+        select(sampleid, compound_name, quant_val) %>% 
+        mutate(sampleid = ifelse(grepl("MB|Pooled|Plasma|CC|Standard", sampleid, ignore.case = T),
+                                 sampleid,
+                                 gsub("^[0-9]{3}_", "", sampleid))) %>% 
+        pivot_wider(names_from = compound_name, values_from = quant_val, values_fill = NA) 
+      
     })
   
   
