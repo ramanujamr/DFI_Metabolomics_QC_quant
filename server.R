@@ -202,7 +202,7 @@ server <- function(input, output, session) {
     rvalues$df_quant_compounds <- hot_to_r(input$Table_calibration_settings)
     
     #saveRDS(rvalues$df_quant_compounds, "df_quant_compounds.rds")
-    # df_quant_compounds <- readRDS("df_quant_compounds_pfbbr.rds")
+    #rvalues$df_quant_compounds <- readRDS("df_quant_compounds_pfbbr.rds")
 
     # Normalized dataframe ---------------------------------------------------------------------------------------------
     
@@ -449,7 +449,7 @@ server <- function(input, output, session) {
     rvalues$df_calibrated <- rvalues$df_calibrated %>% 
       left_join(df_method_blanks_avg, by="compound_name") %>% 
       rowwise() %>%
-      mutate(quant_val = ifelse(input$Checkbox_subtract_MB==T, quant_val - mean_mb, quant_val))
+      mutate(quant_val = ifelse(input$Checkbox_subtract_MB==T, max(quant_val - mean_mb,0), quant_val))
     
     # Display calibrated table
     output$Table_calibrated_data <- DT::renderDataTable({
