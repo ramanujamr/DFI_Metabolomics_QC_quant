@@ -53,7 +53,10 @@ server <- function(input, output, session) {
       TRUE ~ "NOT IDENTIFIED... CHECK FILENAME")
     
     # Set zero threshold
-    zero_threshold <- ifelse(rvalues$panel=="Tryptophan", 100, 1000)
+    zero_threshold <- case_when(
+      rvalues$panel=="Tryptophan" ~ 100,
+      rvalues$panel=="BileAcids" ~ 0,
+      TRUE ~ 1000)
     
     # Read and clean input data --------------------------------
     if (rvalues$panel == "BileAcids") {
@@ -216,7 +219,7 @@ server <- function(input, output, session) {
         left_join(rvalues$df_itsd_stats[, c("sampleid", "letter", "avg")], by= c("sampleid", "letter")) %>% 
         rename(ITSD=avg, peak=peakarea) %>% 
         mutate(norm_peak = ifelse(ITSD==0, 0, peak / ITSD),
-               curveLab = str_extract(sampleid,pattern="CC[1-9][0-9]+|CC[1-9]+")) %>% 
+               curveLab = str_extract(sampleid, pattern="CC[1-9][0-9]+|CC[1-9]+")) %>% 
         ungroup() %>% 
         mutate(norm_peak = ifelse(is.na(norm_peak), 0, norm_peak))
     
