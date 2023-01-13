@@ -133,7 +133,7 @@ server <- function(input, output, session) {
       filter(itsd=="ITSD") %>%
       filter(!grepl("MB|Pooled|Plasma|CC|Standard",sampleid, ignore.case = T)) %>% 
       mutate(peakarea = ifelse(peakarea <= zero_threshold, 0, peakarea)) %>% 
-      group_by(batch, compound_name) %>%
+      group_by(batch, compound_name, conc) %>%
       summarise(stdev = sd(peakarea),
                 average = mean(peakarea),
                 middle = median(peakarea),
