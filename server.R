@@ -71,7 +71,7 @@ server <- function(input, output, session) {
       group_by(compound_name) %>% 
       mutate(found_dil = ifelse(any(grepl("diluted", conc)), "Yes", "No"),
              found_conc = ifelse(any(grepl("concentrated", conc)), "Yes", "No")) %>% 
-      distinct() %>% 
+      distinct(compound_name, .keep_all = T) %>% 
       dplyr::select(-conc)
     
     rvalues$df_quant_compounds <- get(paste0("df_quant_", rvalues$panel)) %>% 
@@ -205,7 +205,7 @@ server <- function(input, output, session) {
     rvalues$df_quant_compounds <- hot_to_r(input$Table_calibration_settings)
     
     #saveRDS(rvalues$df_quant_compounds, "df_quant_compounds.rds")
-    #rvalues$df_quant_compounds <- readRDS("df_quant_compounds_pfbbr.rds")
+    rvalues$df_quant_compounds <- readRDS("df_quant_compounds_pfbbr.rds")
 
     # Normalized dataframe ---------------------------------------------------------------------------------------------
     
