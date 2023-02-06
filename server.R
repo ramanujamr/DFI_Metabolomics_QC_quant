@@ -205,7 +205,7 @@ server <- function(input, output, session) {
     rvalues$df_quant_compounds <- hot_to_r(input$Table_calibration_settings)
     
     #saveRDS(rvalues$df_quant_compounds, "df_quant_compounds.rds")
-    rvalues$df_quant_compounds <- readRDS("df_quant_compounds_pfbbr.rds")
+    #rvalues$df_quant_compounds <- readRDS("df_quant_compounds_pfbbr.rds")
 
     # Normalized dataframe ---------------------------------------------------------------------------------------------
     
