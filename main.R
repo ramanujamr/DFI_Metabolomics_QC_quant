@@ -158,5 +158,5 @@ Function_plot_itsd <- function(df_itsd, df_itsd_stats, num_pages)
 
 source('ui.R', local=TRUE)
 source('server.R', local=TRUE)
-#shinyApp(ui=ui, server=server)
+# shinyApp(ui=ui, server=server)
 runApp(list(ui=ui, server=server), host="0.0.0.0",port=1500)
